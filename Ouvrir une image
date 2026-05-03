@@ -68,3 +68,22 @@ def filtre_flou(matrice_image):
             resultat = resultat + morceau / 9
 
     return limiter_pixels(resultat)
+
+def filtre_nettete(matrice_image, intensite):
+    """Renforce la nettete en ajoutant les details a l'image."""
+    image_originale = matrice_image.astype(float)
+    image_floue = filtre_flou(matrice_image).astype(float)
+
+    details = image_originale - image_floue
+    resultat = image_originale + intensite * details
+
+    return limiter_pixels(resultat)
+
+def filtre_fusion(matrice1, matrice2, alpha):
+    """Melange deux images de meme taille."""
+    image1 = matrice1.astype(float)
+    image2 = matrice2.astype(float)
+
+    resultat = alpha * image1 + (1 - alpha) * image2
+    return limiter_pixels(resultat)
+
