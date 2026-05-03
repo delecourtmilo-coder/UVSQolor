@@ -149,3 +149,60 @@ GUSSIEN FORCEMENT AVEC LES INPUT
 ================================
 
 
+# Filtre flou gaussien
+
+def flou_gaussien():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        rayon = simpledialog.askfloat(
+            "Flou gaussien",
+            "Choisis le rayon du flou :\n1 = léger\n3 = moyen\n6 = fort",
+            minvalue=0.1,
+            maxvalue=20
+        )
+
+        if rayon is not None:
+            image_pil = Image.fromarray(matrice_image.astype("uint8"))
+
+            image_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=rayon))
+
+            matrice_image = np.array(image_pil)
+
+            image = Image.fromarray(matrice_image)
+            afficher_image()
+
+
+menu_fichier.add_command(label="Flou gaussien", command=flou_gaussien)
+
+
+
+
+def nettete_gaussienne():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        rayon = simpledialog.askfloat("Netteté gaussienne","Choisis le rayon du flou gaussien :\n1 = léger\n3 = moyen\n6 = fort",minvalue=0.1,maxvalue=20)
+
+        if rayon is None:
+            return
+
+        image_originale = matrice_image.astype(float)
+
+        image_pil = Image.fromarray(matrice_image.astype("uint8"))
+        image_floue_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=rayon))
+        image_floue = np.array(image_floue_pil).astype(float)
+
+        details = image_originale - image_floue
+
+        resultat = image_originale + details
+
+        resultat = np.clip(resultat, 0, 255)
+        matrice_image = resultat.astype("uint8")
+
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+        menu_fichier.add_command(label="Netteté gaussienne", command=nettete_gaussienne)
+
+
