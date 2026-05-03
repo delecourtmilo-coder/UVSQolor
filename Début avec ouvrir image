@@ -11,17 +11,32 @@ image = None
 photo = None
 matrice_image = None
 
+
+#Afficher l'image (fonction réutilisée dans ouvrir image après)
+
+def afficher_image():
+    global photo, image, canvas
+
+    photo = ImageTk.PhotoImage(image)
+
+    canvas.config(width=image.width, height=image.height)
+    canvas.delete("all")
+    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+
+
 #Ouvrir une image 
 
 def ouvrir_image():
     global image, photo, matrice_image
     
     nom_fichier = filedialog.askopenfilename(title="Choisis ton image",
-            filetypes=("Images", "*.png *.jpg *.jpeg *.bmp"))
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
     
     if nom_fichier != "":
         image = Image.open(nom_fichier).convert("RGB")
         matrice_image = np.array(image)
+
+        afficher_image()
 
         print("Image ouverte :", nom_fichier)
         print("Taille de l'image :", image.size)
@@ -32,6 +47,9 @@ def ouvrir_image():
 fenetre = tk.Tk()
 fenetre.title("UVSQolor")
 fenetre.geometry("800x600")
+
+canvas = tk.Canvas(fenetre, bg="white")
+canvas.pack() #on utilise pack pour l'instant parce que c'est plus simple mais on va peut etre utilisé grid() par la suite 
 
 # Menu
 menu = tk.Menu(fenetre)
