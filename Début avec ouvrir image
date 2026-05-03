@@ -7,6 +7,11 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
 
+====================CHANGEMENT AMIR(NECESSARE POUR GAUSSIEN)======
+from tkinter import filedialog, simpledialog
+from PIL import Image, ImageTk, ImageFilter
+==================================================================
+
 #Initialisation des fonctions qu'on utilisera 
 
 image = None
