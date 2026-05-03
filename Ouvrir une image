@@ -87,3 +87,58 @@ def filtre_fusion(matrice1, matrice2, alpha):
     resultat = alpha * image1 + (1 - alpha) * image2
     return limiter_pixels(resultat)
 
+
+
+============================================================
+
+
+def filtre_contraste(matrice_image):
+    """Augmente le contraste de l'image autour du gris moyen 0.5."""
+    matrice = matrice_image.astype(float) / 255
+
+    pivot = 0.5
+    facteur = 1.2
+
+    resultat = pivot + facteur * (matrice - pivot)
+
+    resultat = resultat * 255
+
+    return limiter_pixels(resultat)
+
+def filtre_flou(matrice_image):
+    """Applique un flou moyen 3x3."""
+    matrice = matrice_image.astype(float)
+
+    matrice_bord = np.pad(matrice, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    resultat = np.zeros(matrice.shape)
+
+    for ligne in range(3):
+        for colonne in range(3):
+            morceau = matrice_bord[
+                ligne:ligne + matrice.shape[0],
+                colonne:colonne + matrice.shape[1],
+                :
+            ]
+            resultat = resultat + morceau / 9
+
+    return limiter_pixels(resultat)
+
+
+def filtre_nettete(matrice_image):
+    """Renforce la netteté de l'image."""
+    image_originale = matrice_image.astype(float)
+    image_floue = filtre_flou(matrice_image).astype(float)
+
+    details = image_originale - image_floue
+    resultat = image_originale + details
+
+    return limiter_pixels(resultat)
+
+def filtre_fusion(matrice1, matrice2):
+    """Fusionne deux images avec une proportion moitié-moitié."""
+    image1 = matrice1.astype(float)
+    image2 = matrice2.astype(float)
+
+    resultat = 0.5 * image1 + 0.5 * image2
+
+    return limiter_pixels(resultat)
