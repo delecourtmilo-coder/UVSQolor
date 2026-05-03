@@ -1,0 +1,46 @@
+#Import de toutes les choses nécessaires
+
+import numpy as np
+import tkinter as tk
+from tkinter import filedialog
+from PIL import Image, ImageTk
+
+#Initialisation des fonctions qu'on utilisera 
+
+image = None
+photo = None
+matrice_image = None
+
+#Ouvrir une image 
+
+def ouvrir_image():
+    global image, photo, matrice_image
+    
+    nom_fichier = filedialog.askopenfilename(title="Choisis ton image",
+            filetypes=("Images", "*.png *.jpg *.jpeg *.bmp"))
+    
+    if nom_fichier != "":
+        image = Image.open(nom_fichier).convert("RGB")
+        matrice_image = np.array(image)
+
+        print("Image ouverte :", nom_fichier)
+        print("Taille de l'image :", image.size)
+        print("Forme de la matrice :", matrice_image.shape)
+
+# Création de la fenêtre pour l'utilisateur
+
+fenetre = tk.Tk()
+fenetre.title("UVSQolor")
+fenetre.geometry("800x600")
+
+# Menu
+menu = tk.Menu(fenetre)
+fenetre.config(menu=menu) #propriété menu=l'objet qu'on a défini nommé menu
+
+menu_fichier = tk.Menu(menu, tearoff=0) #Quand on clique sur menu, le sous menu fichier apparaitra. tearoff permet de rendre ce sous menu non détachable
+menu.add_cascade(label="Fichier", menu=menu_fichier)# add_cascade est la pour ajouter un menu déroulant dans la bare principale
+
+menu_fichier.add_command(label="Ouvrir", command=ouvrir_image)
+
+# Boucle principale
+fenetre.mainloop()
