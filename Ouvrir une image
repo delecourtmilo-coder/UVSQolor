@@ -142,3 +142,10 @@ def filtre_fusion(matrice1, matrice2):
     resultat = 0.5 * image1 + 0.5 * image2
 
     return limiter_pixels(resultat)
+
+
+================================
+GUSSIEN FORCEMENT AVEC LES INPUT
+================================
+
+
