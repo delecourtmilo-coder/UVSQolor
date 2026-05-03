@@ -201,5 +201,189 @@ def luminosite():
 menu_fichier.add_command(label="Luminosité", command=luminosite)
 
 
+# Fonction utile pour garder les pixels entre 0 et 255
+
+def limiter_pixels(matrice):
+    matrice = np.clip(matrice, 0, 255)
+    matrice = matrice.astype("uint8")
+    return matrice
+
+
+# Filtre contraste
+
+def filtre_contraste(matrice_image):
+    """Augmente le contraste de l'image autour du gris moyen 0.5."""
+    matrice = matrice_image.astype(float) / 255
+
+    pivot = 0.5
+    facteur = 1.2
+
+    resultat = pivot + facteur * (matrice - pivot)
+
+    resultat = resultat * 255
+
+    return limiter_pixels(resultat)
+
+
+def contraste():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        matrice_image = filtre_contraste(matrice_image)
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_fichier.add_command(label="Contraste", command=contraste)
+
+
+# Filtre flou simple
+
+def filtre_flou(matrice_image):
+    """Applique un flou moyen 3x3."""
+    matrice = matrice_image.astype(float)
+
+    matrice_bord = np.pad(matrice, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    resultat = np.zeros(matrice.shape)
+
+    for ligne in range(3):
+        for colonne in range(3):
+            morceau = matrice_bord[
+                ligne:ligne + matrice.shape[0],
+                colonne:colonne + matrice.shape[1],
+                :
+            ]
+            resultat = resultat + morceau / 9
+
+    return limiter_pixels(resultat)
+
+
+def flou():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        matrice_image = filtre_flou(matrice_image)
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_fichier.add_command(label="Flou", command=flou)
+
+
+# Filtre netteté simple
+
+def filtre_nettete(matrice_image):
+    """Renforce la netteté de l'image."""
+    image_originale = matrice_image.astype(float)
+    image_floue = filtre_flou(matrice_image).astype(float)
+
+    details = image_originale - image_floue
+    resultat = image_originale + details
+
+    return limiter_pixels(resultat)
+
+
+def nettete():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        matrice_image = filtre_nettete(matrice_image)
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_fichier.add_command(label="Netteté", command=nettete)
+
+
+# Filtre fusion
+
+def filtre_fusion(matrice1, matrice2):
+    """Fusionne deux images avec une proportion moitié-moitié."""
+    image1 = matrice1.astype(float)
+    image2 = matrice2.astype(float)
+
+    resultat = 0.5 * image1 + 0.5 * image2
+
+    return limiter_pixels(resultat)
+
+
+def fusion():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        nom_fichier = filedialog.askopenfilename(title="Choisis la deuxième image", filetypes=[
+                                                 ("Images", "*.png *.jpg *.jpeg *.bmp")])
+
+        if nom_fichier != "":
+            deuxieme_image = Image.open(nom_fichier).convert("RGB")
+            deuxieme_matrice = np.array(deuxieme_image)
+
+            if deuxieme_matrice.shape == matrice_image.shape:
+                matrice_image = filtre_fusion(matrice_image, deuxieme_matrice)
+                image = Image.fromarray(matrice_image)
+                afficher_image()
+            else:
+                print("Erreur : les deux images doivent avoir la même taille.")
+
+
+menu_fichier.add_command(label="Fusion", command=fusion)
+
+
+# Filtre flou gaussien
+
+def flou_gaussien():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        rayon = simpledialog.askfloat(
+            "Flou gaussien", "Choisis le rayon du flou :\n1 = léger\n3 = moyen\n6 = fort", minvalue=0.1, maxvalue=20)
+
+        if rayon is not None:
+            image_pil = Image.fromarray(matrice_image.astype("uint8"))
+            image_pil = image_pil.filter(
+                ImageFilter.GaussianBlur(radius=rayon))
+
+            matrice_image = np.array(image_pil)
+
+            image = Image.fromarray(matrice_image)
+            afficher_image()
+
+
+menu_fichier.add_command(label="Flou gaussien", command=flou_gaussien)
+
+
+# Filtre netteté gaussienne
+
+def nettete_gaussienne():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        rayon = simpledialog.askfloat(
+            "Netteté gaussienne", "Choisis le rayon du flou gaussien :\n1 = léger\n3 = moyen\n6 = fort", minvalue=0.1, maxvalue=20)
+
+        if rayon is None:
+            return
+
+        image_originale = matrice_image.astype(float)
+
+        image_pil = Image.fromarray(matrice_image.astype("uint8"))
+        image_floue_pil = image_pil.filter(
+            ImageFilter.GaussianBlur(radius=rayon))
+        image_floue = np.array(image_floue_pil).astype(float)
+
+        details = image_originale - image_floue
+        resultat = image_originale + details
+
+        resultat = np.clip(resultat, 0, 255)
+        matrice_image = resultat.astype("uint8")
+
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_fichier.add_command(label="Netteté gaussienne",
+                         command=nettete_gaussienne)
+
+
 # Mainloop
 fenetre.mainloop()
