@@ -60,5 +60,7 @@ menu.add_cascade(label="Fichier", menu=menu_fichier)# add_cascade est la pour aj
 
 menu_fichier.add_command(label="Ouvrir", command=ouvrir_image)
 
-# Boucle principale
+
+
+
 fenetre.mainloop()
