@@ -1,0 +1,205 @@
+
+# Import de toutes les choses nécessaires
+
+import numpy as np
+import tkinter as tk
+from tkinter import filedialog, simpledialog
+from PIL import Image, ImageTk, ImageFilter
+
+# Initialisation des fonctions qu'on utilisera
+
+image = None
+photo = None
+matrice_image = None
+
+#########
+
+historique = []
+indice_historique = -1
+
+menu_edition = None
+
+#########
+# Afficher l'image (fonction réutilisée dans ouvrir image après)
+
+
+def afficher_image():
+    global photo, image, canvas
+
+    photo = ImageTk.PhotoImage(image)
+    # parce que l'image est en format PIL qui est non affichable.
+    # On met photo en format Tkinter
+
+    canvas.config(width=image.width, height=image.height)
+    canvas.delete("all")
+    # On efface ce qu'il y avait avant pour que les images ne s'empilent pas les unes sur les autres
+    # "all" est compris par le programme comme pour "blue"
+    # On a rajouté Anchor parce que sinon l'image est coupée et mal placée
+    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
+
+
+#########################################
+def mettre_a_jour_menu_historique():
+    """Active ou désactive Annuler / Rétablir selon la position dans l'historique."""
+    global menu_edition, historique, indice_historique
+
+    if menu_edition is not None:
+        if indice_historique > 0:
+            menu_edition.entryconfig("Annuler", state="normal")
+        else:
+            menu_edition.entryconfig("Annuler", state="disabled")
+
+        if indice_historique < len(historique) - 1:
+            menu_edition.entryconfig("Rétablir", state="normal")
+        else:
+            menu_edition.entryconfig("Rétablir", state="disabled")
+
+
+def initialiser_historique():
+    """Remet l'historique à zéro quand on ouvre une nouvelle image."""
+    global historique, indice_historique, matrice_image
+    historique = []
+    historique.append(matrice_image.copy())
+    indice_historique = 0
+
+    mettre_a_jour_menu_historique()
+
+
+def appliquer_nouvelle_image(nouvelle_matrice):
+    """
+    Applique une nouvelle matrice comme image actuelle,
+    l'ajoute à l'historique,
+    puis affiche l'image.
+    """
+    global image, matrice_image, historique, indice_historique
+
+    # Si on avait fait Annuler puis qu'on applique un nouveau filtre,
+    # il faut supprimer les versions qui étaient après l'indice actuel.
+    if indice_historique < len(historique) - 1:
+        historique = historique[:indice_historique + 1]
+
+    # On ajoute la nouvelle version dans l'historique
+    historique.append(nouvelle_matrice.copy())
+    indice_historique = indice_historique + 1
+
+    # On met à jour l'image actuelle
+    matrice_image = nouvelle_matrice.copy()
+    image = Image.fromarray(matrice_image.astype("uint8"))
+
+    afficher_image()
+    mettre_a_jour_menu_historique()
+
+
+def annuler():
+    """Revient à l'image précédente dans l'historique."""
+    global image, matrice_image, historique, indice_historique
+
+    if indice_historique > 0:
+        indice_historique = indice_historique - 1
+
+        matrice_image = historique[indice_historique].copy()
+        image = Image.fromarray(matrice_image.astype("uint8"))
+
+        afficher_image()
+        mettre_a_jour_menu_historique()
+
+
+def retablir():
+    """Revient à l'image suivante après une annulation."""
+    global image, matrice_image, historique, indice_historique
+
+    if indice_historique < len(historique) - 1:
+        indice_historique = indice_historique + 1
+
+        matrice_image = historique[indice_historique].copy()
+        image = Image.fromarray(matrice_image.astype("uint8"))
+
+        afficher_image()
+        mettre_a_jour_menu_historique()
+
+
+########################################
+
+# Ouvrir une image
+
+def ouvrir_image():
+    global image, photo, matrice_image
+
+    nom_fichier = filedialog.askopenfilename(title="Choisis ton image",
+                                             filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
+
+    if nom_fichier != "":
+        image = Image.open(nom_fichier).convert("RGB")
+        matrice_image = np.array(image)
+
+        afficher_image()
+        initialiser_historique()
+        print("Image ouverte :", nom_fichier)
+        print("Taille de l'image :", image.size)
+        print("Forme de la matrice :", matrice_image.shape)
+
+# Création de la fenêtre pour l'utilisateur
+
+
+fenetre = tk.Tk()
+fenetre.title("UVSQolor")
+fenetre.geometry("800x600")
+
+canvas = tk.Canvas(fenetre, bg="white")
+# on utilise pack() pour l'instant parce que c'est plus simple mais on va peut etre utilisé grid() par la suite
+canvas.grid(row=1, column=0)
+
+
+# Menu
+menu = tk.Menu(fenetre)
+fenetre.config(menu=menu)  # propriété menu=l'objet qu'on a défini nommé menu
+
+# Quand on clique sur menu, le sous menu fichier apparaitra. tearoff permet de rendre ce sous menu non détachable
+menu_fichier = tk.Menu(menu, tearoff=0)
+# add_cascade est la pour ajouter un menu déroulant dans la bare principale
+menu.add_cascade(label="Fichier", menu=menu_fichier)
+
+menu_fichier.add_command(label="Ouvrir", command=ouvrir_image)
+
+#################
+menu_edition = tk.Menu(menu, tearoff=0)
+menu.add_cascade(label="Édition", menu=menu_edition)
+
+menu_edition.add_command(label="Annuler", command=annuler, state="disabled")
+menu_edition.add_command(label="Rétablir", command=retablir, state="disabled")
+##################
+
+
+# Filtre négatif
+
+def negatif():
+    global image, matrice_image
+
+    if matrice_image is not None:  # Donc si l'utilisateur a bien mis une image
+        matrice_image = 255 - matrice_image  # On inverse les couleurs
+        # image = Image.fromarray(matrice_image.astype("uint8")) # on peut garder image = Image.fromarray(matrice_image) mais avec astype("uint8")est plus sur pour le code
+        image = Image.fromarray(matrice_image)
+        # astype("uint8") force le code à rester entre 0 et 255
+        afficher_image()
+
+
+menu_fichier.add_command(label="Négatif", command=negatif)
+
+
+def luminosite():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        matrice_image = matrice_image + 10  # ça augmente la luminosité de 40
+        # on fait en sorte que ça ne sorte pas de l'intervalle 0-255
+        matrice_image = np.clip(matrice_image, 0, 255)
+        # On peut aussi utiliser image = Image.fromarray(matrice_image.astype("uint8"))
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_fichier.add_command(label="Luminosité", command=luminosite)
+
+
+# Mainloop
+fenetre.mainloop()
