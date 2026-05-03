@@ -4,13 +4,8 @@
 
 import numpy as np
 import tkinter as tk
-from tkinter import filedialog
-from PIL import Image, ImageTk
-
-====================CHANGEMENT AMIR(NECESSARE POUR GAUSSIEN)======
 from tkinter import filedialog, simpledialog
 from PIL import Image, ImageTk, ImageFilter
-==================================================================
 
 #Initialisation des fonctions qu'on utilisera 
 
@@ -135,7 +130,7 @@ def ouvrir_image():
         matrice_image = np.array(image)
 
         afficher_image()
-
+        initialiser_historique() 
         print("Image ouverte :", nom_fichier)
         print("Taille de l'image :", image.size)
         print("Forme de la matrice :", matrice_image.shape)
