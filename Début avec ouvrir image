@@ -1,3 +1,5 @@
+"""1.Ouvrir une image"""
+
 #Import de toutes les choses nécessaires
 
 import numpy as np
@@ -11,18 +13,20 @@ image = None
 photo = None
 matrice_image = None
 
-
 #Afficher l'image (fonction réutilisée dans ouvrir image après)
 
 def afficher_image():
     global photo, image, canvas
 
-    photo = ImageTk.PhotoImage(image)
+    photo = ImageTk.PhotoImage(image) 
+    #parce que l'image est en format PIL qui est non affichable. 
+    #On met photo en format Tkinter
 
     canvas.config(width=image.width, height=image.height)
     canvas.delete("all")
-    canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-
+     # On efface ce qu'il y avait avant pour que les images ne s'empilent pas les unes sur les autres 
+     # "all" est compris par le programme comme pour "blue"
+    canvas.create_image(0, 0,anchor=tk.NW, image=photo) #On a rajouté Anchor parce que sinon l'image est coupée et mal placée
 
 #Ouvrir une image 
 
@@ -49,7 +53,8 @@ fenetre.title("UVSQolor")
 fenetre.geometry("800x600")
 
 canvas = tk.Canvas(fenetre, bg="white")
-canvas.pack() #on utilise pack pour l'instant parce que c'est plus simple mais on va peut etre utilisé grid() par la suite 
+canvas.grid(row=1, column=0) #on utilise pack() pour l'instant parce que c'est plus simple mais on va peut etre utilisé grid() par la suite 
+
 
 # Menu
 menu = tk.Menu(fenetre)
@@ -62,5 +67,47 @@ menu_fichier.add_command(label="Ouvrir", command=ouvrir_image)
 
 
 
+#Filtre négatif
 
+def negatif():
+    global image, matrice_image
+
+    if matrice_image is not None: #Donc si l'utilisateur a bien mis une image 
+        matrice_image = 255 - matrice_image # On inverse les couleurs
+        image = Image.fromarray(matrice_image)#image = Image.fromarray(matrice_image.astype("uint8")) # on peut garder image = Image.fromarray(matrice_image) mais avec astype("uint8")est plus sur pour le code
+        #astype("uint8") force le code à rester entre 0 et 255
+        afficher_image()
+
+menu_fichier.add_command(label="Négatif", command=negatif)
+
+
+def luminosite():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        matrice_image = matrice_image + 40 #ça augmente la luminosité de 40
+        matrice_image = np.clip(matrice_image, 0, 255) #on fait en sorte que ça ne sorte pas de l'intervalle 0-255
+        image = Image.fromarray(matrice_image) #On peut aussi utiliser image = Image.fromarray(matrice_image.astype("uint8"))
+        afficher_image()
+
+menu_fichier.add_command(label="Luminosité", command=luminosite)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Mainloop
 fenetre.mainloop()
