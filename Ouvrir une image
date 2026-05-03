@@ -1,439 +1,70 @@
-"""
-Projet UVSQolor - version en un seul fichier
-
-Bibliotheques necessaires :
-    pip install pillow numpy
-
-Lancer le programme :
-    python main.py
-"""
-
-import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
-from PIL import Image, ImageTk, ImageFilter
 import numpy as np
+from PIL import Image, ImageFilter
 
 
-# -------------------------------
-# Variables globales
-# -------------------------------
-
-fenetre = None
-canvas = None
-image_np = None        # image actuelle sous forme de matrice numpy
-image_tk = None        # image compatible Tkinter pour l'affichage
-
-menu_effets = None
+def limiter_pixels(matrice):
+    """Ramene les valeurs entre 0 et 255 et transforme en entiers."""
+    matrice = np.clip(matrice, 0, 255)
+    matrice = matrice.astype(np.uint8)
+    return matrice
 
 
-# -------------------------------
-# Fonctions utiles image / affichage
-# -------------------------------
+def filtre_sepia(matrice_image):
+    """Renvoie une copie de l'image avec un effet sepia."""
+    matrice = matrice_image.astype(float)
 
-def limiter_pixels(image):
-    """Limite les valeurs des pixels entre 0 et 255 et renvoie une image en entier."""
-    image = np.clip(image, 0, 255)
-    image = image.astype(np.uint8)
-    return image
-
-
-def rafraichir():
-    """Affiche l'image actuelle dans le canvas."""
-    global image_np
-    global image_tk
-    global canvas
-
-    if image_np is None:
-        return
-
-    # Conversion numpy -> image Pillow -> image Tkinter
-    image_pil = Image.fromarray(image_np)
-    image_tk = ImageTk.PhotoImage(image_pil)
-
-    largeur = image_pil.size[0]
-    hauteur = image_pil.size[1]
-
-    if canvas is None:
-        canvas = tk.Canvas(fenetre, width=largeur, height=hauteur)
-        canvas.pack()
-    else:
-        canvas.delete("all")
-        canvas.config(width=largeur, height=hauteur)
-
-    canvas.create_image(0, 0, anchor=tk.NW, image=image_tk)
-
-
-def activer_effets():
-    """Active le menu Effets apres ouverture d'une image."""
-    global menu_effets
-
-    if menu_effets is not None:
-        menu_effets.entryconfig("Filtre vert", state="normal")
-        menu_effets.entryconfig("Sépia", state="normal")
-        menu_effets.entryconfig("Luminosité", state="normal")
-        menu_effets.entryconfig("Contraste", state="normal")
-        menu_effets.entryconfig("Flou", state="normal")
-        menu_effets.entryconfig("Netteté", state="normal")
-        menu_effets.entryconfig("Fusion", state="normal")
-        menu_effets.entryconfig("Flou gaussien", state="normal")
-        menu_effets.entryconfig("Netteté gaussienne", state="normal")
-
-
-# -------------------------------
-# Fichier : ouvrir / sauvegarder
-# -------------------------------
-
-def ouvrir_image():
-    """Ouvre une image choisie par l'utilisateur et l'affiche."""
-    global image_np
-
-    nom_fichier = filedialog.askopenfilename(
-        title="Ouvrir une image",
-        filetypes=[
-            ("Images", "*.png *.jpg *.jpeg *.bmp"),
-            ("Tous les fichiers", "*.*")
-        ]
-    )
-
-    if nom_fichier == "":
-        return
-
-    image_pil = Image.open(nom_fichier)
-    image_pil = image_pil.convert("RGB")
-    image_np = np.array(image_pil)
-
-    rafraichir()
-    activer_effets()
-
-
-def sauvegarder_image():
-    """Sauvegarde l'image actuelle."""
-    global image_np
-
-    if image_np is None:
-        messagebox.showerror("Erreur", "Aucune image à sauvegarder.")
-        return
-
-    nom_fichier = filedialog.asksaveasfilename(
-        title="Enregistrer sous",
-        defaultextension=".png",
-        filetypes=[
-            ("PNG", "*.png"),
-            ("JPEG", "*.jpg"),
-            ("Tous les fichiers", "*.*")
-        ]
-    )
-
-    if nom_fichier == "":
-        return
-
-    image_pil = Image.fromarray(image_np)
-    image_pil.save(nom_fichier)
-
-
-# -------------------------------
-# Filtres obligatoires
-# -------------------------------
-
-def filtre_vert():
-    """Garde seulement le canal vert de l'image."""
-    global image_np
-
-    if image_np is None:
-        return
-
-    resultat = image_np.copy()
-    resultat[:, :, 0] = 0   # rouge
-    resultat[:, :, 2] = 0   # bleu
-
-    image_np = resultat
-    rafraichir()
-
-
-def filtre_sepia():
-    """Applique un filtre sépia à l'image."""
-    global image_np
-
-    if image_np is None:
-        return
-
-    image = image_np.astype(float)
-
-    rouge = image[:, :, 0]
-    vert = image[:, :, 1]
-    bleu = image[:, :, 2]
+    rouge = matrice[:, :, 0]
+    vert = matrice[:, :, 1]
+    bleu = matrice[:, :, 2]
 
     nouveau_rouge = 0.393 * rouge + 0.769 * vert + 0.189 * bleu
     nouveau_vert = 0.349 * rouge + 0.686 * vert + 0.168 * bleu
     nouveau_bleu = 0.272 * rouge + 0.534 * vert + 0.131 * bleu
 
-    resultat = np.zeros(image.shape)
+    resultat = np.zeros(matrice.shape)
     resultat[:, :, 0] = nouveau_rouge
     resultat[:, :, 1] = nouveau_vert
     resultat[:, :, 2] = nouveau_bleu
 
-    image_np = limiter_pixels(resultat)
-    rafraichir()
+    return limiter_pixels(resultat)
 
 
-def luminosite():
-    """Modifie la luminosité avec une correction gamma simple."""
-    global image_np
+def filtre_luminosite(matrice_image, gamma):
+    """Modifie la luminosite avec une correction gamma simple."""
+    matrice = matrice_image.astype(float) / 255
 
-    if image_np is None:
-        return
-
-    gamma = simpledialog.askfloat(
-        "Luminosité",
-        "Entrez gamma :\n< 1 : plus clair\n= 1 : pareil\n> 1 : plus sombre",
-        minvalue=0.1,
-        maxvalue=5.0
-    )
-
-    if gamma is None:
-        return
-
-    image = image_np.astype(float) / 255
-    resultat = image ** gamma
+    resultat = matrice ** gamma
     resultat = resultat * 255
 
-    image_np = limiter_pixels(resultat)
-    rafraichir()
+    return limiter_pixels(resultat)
 
+def filtre_contraste(matrice_image, facteur):
+    """Modifie le contraste de l'image autour du gris moyen 0.5."""
+    matrice = matrice_image.astype(float) / 255
 
-def contraste():
-    """Modifie le contraste autour du pivot 0.5."""
-    global image_np
+    pivot = 0.5
 
-    if image_np is None:
-        return
+    resultat = pivot + facteur * (matrice - pivot)
 
-    facteur = simpledialog.askfloat(
-        "Contraste",
-        "Entrez un facteur :\n1 : pareil\n> 1 : plus contrasté\nentre 0 et 1 : moins contrasté",
-        minvalue=0.1,
-        maxvalue=5.0
-    )
-
-    if facteur is None:
-        return
-
-    image = image_np.astype(float) / 255
-
-    # Formule simple de contraste autour de 0.5
-    resultat = 0.5 + facteur * (image - 0.5)
     resultat = resultat * 255
 
-    image_np = limiter_pixels(resultat)
-    rafraichir()
+    return limiter_pixels(resultat)
 
 
-def flou():
+def filtre_flou(matrice_image):
     """Applique un flou moyen 3x3."""
-    global image_np
+    matrice = matrice_image.astype(float)
 
-    if image_np is None:
-        return
+    matrice_bord = np.pad(matrice, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    resultat = np.zeros(matrice.shape)
 
-    image = image_np.astype(float)
-
-    # On ajoute une bordure pour gérer les pixels au bord de l'image
-    image_bord = np.pad(image, ((1, 1), (1, 1), (0, 0)), mode="edge")
-
-    resultat = np.zeros(image.shape)
-
-    # Moyenne des 9 pixels autour de chaque pixel
-    for decalage_ligne in range(3):
-        for decalage_colonne in range(3):
-            morceau = image_bord[
-                decalage_ligne:decalage_ligne + image.shape[0],
-                decalage_colonne:decalage_colonne + image.shape[1],
+    for ligne in range(3):
+        for colonne in range(3):
+            morceau = matrice_bord[
+                ligne:ligne + matrice.shape[0],
+                colonne:colonne + matrice.shape[1],
                 :
             ]
             resultat = resultat + morceau / 9
 
-    image_np = limiter_pixels(resultat)
-    rafraichir()
-
-
-def nettete():
-    """Renforce la netteté avec image + détails."""
-    global image_np
-
-    if image_np is None:
-        return
-
-    image_originale = image_np.astype(float)
-
-    # On fabrique une image floue sans modifier directement image_np
-    image = image_np.astype(float)
-    image_bord = np.pad(image, ((1, 1), (1, 1), (0, 0)), mode="edge")
-    image_floue = np.zeros(image.shape)
-
-    for decalage_ligne in range(3):
-        for decalage_colonne in range(3):
-            morceau = image_bord[
-                decalage_ligne:decalage_ligne + image.shape[0],
-                decalage_colonne:decalage_colonne + image.shape[1],
-                :
-            ]
-            image_floue = image_floue + morceau / 9
-
-    details = image_originale - image_floue
-    resultat = image_originale + details
-
-    image_np = limiter_pixels(resultat)
-    rafraichir()
-
-
-def fusion():
-    """Fusionne l'image actuelle avec une deuxième image de même taille."""
-    global image_np
-
-    if image_np is None:
-        return
-
-    nom_fichier = filedialog.askopenfilename(
-        title="Choisir une deuxième image",
-        filetypes=[
-            ("Images", "*.png *.jpg *.jpeg *.bmp"),
-            ("Tous les fichiers", "*.*")
-        ]
-    )
-
-    if nom_fichier == "":
-        return
-
-    deuxieme_image = Image.open(nom_fichier)
-    deuxieme_image = deuxieme_image.convert("RGB")
-    deuxieme_np = np.array(deuxieme_image)
-
-    if deuxieme_np.shape != image_np.shape:
-        messagebox.showerror("Erreur", "Les deux images doivent avoir la même taille.")
-        return
-
-    alpha = simpledialog.askfloat(
-        "Fusion",
-        "Entrez alpha entre 0 et 1 :\n0.5 = moitié/moitié",
-        minvalue=0.0,
-        maxvalue=1.0
-    )
-
-    if alpha is None:
-        return
-
-    resultat = alpha * image_np.astype(float) + (1 - alpha) * deuxieme_np.astype(float)
-
-    image_np = limiter_pixels(resultat)
-    rafraichir()
-
-
-def flou_gaussien():
-    """Applique un flou gaussien avec Pillow."""
-    global image_np
-
-    if image_np is None:
-        return
-
-    rayon = simpledialog.askfloat(
-        "Flou gaussien",
-        "Entrez le rayon du flou :\nexemple : 2",
-        minvalue=0.1,
-        maxvalue=20.0
-    )
-
-    if rayon is None:
-        return
-
-    image_pil = Image.fromarray(image_np)
-    image_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=rayon))
-
-    image_np = np.array(image_pil)
-    rafraichir()
-
-
-def nettete_gaussienne():
-    """Renforce la netteté en utilisant un flou gaussien."""
-    global image_np
-
-    if image_np is None:
-        return
-
-    rayon = simpledialog.askfloat(
-        "Netteté gaussienne",
-        "Entrez le rayon du flou gaussien :\nexemple : 2",
-        minvalue=0.1,
-        maxvalue=20.0
-    )
-
-    if rayon is None:
-        return
-
-    intensite = simpledialog.askfloat(
-        "Netteté gaussienne",
-        "Entrez l'intensité :\nexemple : 1",
-        minvalue=0.1,
-        maxvalue=5.0
-    )
-
-    if intensite is None:
-        return
-
-    image_originale = image_np.astype(float)
-
-    image_pil = Image.fromarray(image_np)
-    image_floue_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=rayon))
-    image_floue = np.array(image_floue_pil).astype(float)
-
-    details = image_originale - image_floue
-    resultat = image_originale + intensite * details
-
-    image_np = limiter_pixels(resultat)
-    rafraichir()
-
-
-# -------------------------------
-# Interface Tkinter
-# -------------------------------
-
-def creer_interface():
-    """Crée la fenêtre principale et les menus."""
-    global fenetre
-    global menu_effets
-
-    fenetre = tk.Tk()
-    fenetre.title("UVSQolor")
-
-    barre_menu = tk.Menu(fenetre)
-
-    # Menu Fichier
-    menu_fichier = tk.Menu(barre_menu, tearoff=0)
-    menu_fichier.add_command(label="Ouvrir", command=ouvrir_image)
-    menu_fichier.add_command(label="Enregistrer sous", command=sauvegarder_image)
-    menu_fichier.add_separator()
-    menu_fichier.add_command(label="Quitter", command=fenetre.destroy)
-    barre_menu.add_cascade(label="Fichier", menu=menu_fichier)
-
-    # Menu Effets
-    menu_effets = tk.Menu(barre_menu, tearoff=0)
-    menu_effets.add_command(label="Filtre vert", command=filtre_vert, state="disabled")
-    menu_effets.add_command(label="Sépia", command=filtre_sepia, state="disabled")
-    menu_effets.add_command(label="Luminosité", command=luminosite, state="disabled")
-    menu_effets.add_command(label="Contraste", command=contraste, state="disabled")
-    menu_effets.add_command(label="Flou", command=flou, state="disabled")
-    menu_effets.add_command(label="Netteté", command=nettete, state="disabled")
-    menu_effets.add_command(label="Fusion", command=fusion, state="disabled")
-    menu_effets.add_command(label="Flou gaussien", command=flou_gaussien, state="disabled")
-    menu_effets.add_command(label="Netteté gaussienne", command=nettete_gaussienne, state="disabled")
-    barre_menu.add_cascade(label="Effets", menu=menu_effets)
-
-    fenetre.config(menu=barre_menu)
-    fenetre.mainloop()
-
-
-# -------------------------------
-# Lancement du programme
-# -------------------------------
-
-creer_interface()
-
+    return limiter_pixels(resultat)
