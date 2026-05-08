@@ -1,0 +1,364 @@
+#Ouvrir une image"
+
+#Import de toutes les choses nécessaires
+
+import numpy as np
+from tkinter import simpledialog
+import tkinter as tk
+from tkinter import filedialog
+from PIL import Image, ImageTk, ImageFilter
+
+#Initialisation des fonctions qu'on utilisera 
+
+image = None
+photo = None
+matrice_image = None
+matrice_avant_filtre = None
+
+historique = []
+indice_historique = -1
+menu_edition = None
+
+#Afficher l'image (fonction réutilisée dans ouvrir image après)
+
+def afficher_image():
+    global photo, image, canvas
+    
+
+    photo = ImageTk.PhotoImage(image) 
+    #parce que l'image est en format PIL qui est non affichable. 
+    #On met photo en format Tkinter
+
+    canvas.config(width=image.width, height=image.height)
+    canvas.delete("all")
+     # On efface ce qu'il y avait avant pour que les images ne s'empilent pas les unes sur les autres 
+     # "all" est compris par le programme comme pour "blue"
+    canvas.create_image(0, 0,anchor=tk.NW, image=photo) #On a rajouté Anchor parce que sinon l'image est coupée et mal placée
+
+#Ouvrir une image 
+
+def ouvrir_image():
+    global image, photo, matrice_image
+    
+    nom_fichier = filedialog.askopenfilename(title="Choisis ton image",
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
+    
+    if nom_fichier != "":
+        image = Image.open(nom_fichier).convert("RGB")
+        matrice_image = np.array(image)
+
+        afficher_image()
+
+        print("Image ouverte :", nom_fichier)
+        print("Taille de l'image :", image.size)
+        print("Forme de la matrice :", matrice_image.shape)
+
+# Création de la fenêtre pour l'utilisateur
+
+fenetre = tk.Tk()
+fenetre.title("UVSQolor")
+fenetre.geometry("800x600")
+
+canvas = tk.Canvas(fenetre, bg="white")
+canvas.grid(row=1, column=0) #on utilise pack() pour l'instant parce que c'est plus simple mais on va peut etre utilisé grid() par la suite 
+
+
+# Menu
+menu = tk.Menu(fenetre)
+fenetre.config(menu=menu) #propriété menu=l'objet qu'on a défini nommé menu
+
+menu_fichier = tk.Menu(menu, tearoff=0) #Quand on clique sur menu, le sous menu fichier apparaitra. tearoff permet de rendre ce sous menu non détachable
+menu.add_cascade(label="Fichier", menu=menu_fichier)# add_cascade est la pour ajouter un menu déroulant dans la bare principale
+
+menu_fichier.add_command(label="Ouvrir", command=ouvrir_image)
+
+menu_filtres = tk.Menu(menu, tearoff=0)
+menu.add_cascade(label="Filtres", menu=menu_filtres)
+
+
+
+#Filtre négatif
+
+def negatif():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None: #Donc si l'utilisateur a bien mis une image 
+        matrice_image = 255 - matrice_image # On inverse les couleurs
+        image = Image.fromarray(matrice_image)#image = Image.fromarray(matrice_image.astype("uint8")) # on peut garder image = Image.fromarray(matrice_image) mais avec astype("uint8")est plus sur pour le code
+        #astype("uint8") force le code à rester entre 0 et 255
+        afficher_image()
+
+menu_filtres.add_command(label="Négatif", command=negatif)
+
+
+def luminosite():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        matrice_image = matrice_image + 10 #ça augmente la luminosité de 10
+        matrice_image = np.clip(matrice_image, 0, 255) #on fait en sorte que ça ne sorte pas de l'intervalle 0-255
+        image = Image.fromarray(matrice_image) #On peut aussi utiliser image = Image.fromarray(matrice_image.astype("uint8"))
+        afficher_image()
+
+menu_filtres.add_command(label="Luminosité", command=luminosite)
+
+
+def contraste():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        facteur = 1.75
+        pivot = 0.5
+
+        matrice = matrice_image.astype(float) / 255
+        # On met les résultats entre 0 et 1
+
+        resultat = pivot + facteur * (matrice - pivot)
+        # On enlève d'abord pivot, pour centrer toutes les valeurs
+        #le facteur permet de accentuer le contraste ou plutot l'écart entre les couleurs
+        #+pivot permet de revenir dans l'échelle de l'image
+        resultat = resultat * 255
+
+        matrice_image = np.clip(resultat, 0, 255).astype("uint8")
+
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+menu_filtres.add_command(label="Contraste", command=contraste)
+
+
+
+def sepia():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        #On peut rajouter, matrice = matrice_image.astype(float), juste pour plus de précisions dans les floats
+        
+        rouge = matrice_image[:, :, 0]
+        vert = matrice_image[:, :, 1]
+        bleu = matrice_image[:, :, 2]
+        
+        nouveau_rouge = 0.393 * rouge + 0.769 * vert + 0.189 * bleu
+        nouveau_vert = 0.349 * rouge + 0.686 * vert + 0.168 * bleu
+        nouveau_bleu = 0.272 * rouge + 0.534 * vert + 0.131 * bleu
+        
+        resultat = np.zeros(matrice_image.shape)
+        resultat[:, :, 0] = nouveau_rouge
+        resultat[:, :, 1] = nouveau_vert
+        resultat[:, :, 2] = nouveau_bleu
+        
+        matrice_image = np.clip(resultat, 0, 255).astype("uint8") 
+        # on rajoute le astype("uint8") parce que sinon on a une erreur qui nous dit "Cannot handle this data type: (1, 1, 3), <f8"
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+menu_filtres.add_command(label="Sepia", command=sepia)
+
+
+def flou():
+
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        
+        matrice_bord = np.pad(matrice_image, ((1, 1), (1, 1), (0, 0)), mode="edge")
+        resultat = np.zeros(matrice_image.shape)
+        for ligne in range(3):
+            for colonne in range(3):
+                morceau = matrice_bord[ligne:ligne + matrice_image.shape[0],colonne:colonne + matrice_image.shape[1],:]
+                resultat = resultat + morceau / 9
+        matrice_image = np.clip(resultat, 0, 255).astype("uint8") 
+        # on rajoute le astype("uint8") parce que sinon on a une erreur qui nous dit "Cannot handle this data type: (1, 1, 3), <f8"
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+    
+menu_filtres.add_command(label="Flou", command=flou)
+
+
+
+def calcul_flou(matrice): 
+    #fonction nécessaire pour la netteté
+    #la netteté = image originale + (image originale - image floue)
+    #Donc on doit calculer image floue et dans notre fontioin flou, on ne renvoie pas de matrice
+    
+    matrice_bord = np.pad(matrice, ((1, 1), (1, 1), (0, 0)), mode="edge")
+    resultat = np.zeros(matrice.shape)
+
+    for ligne in range(3):
+        for colonne in range(3):
+            morceau = matrice_bord[ligne:ligne + matrice.shape[0],colonne:colonne + matrice.shape[1],:]
+            resultat = resultat + morceau / 9
+
+    return resultat
+
+
+def nettete():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        matrice = matrice_image.astype(float)
+
+        image_floue = calcul_flou(matrice)
+
+        details = matrice - image_floue
+
+        resultat = matrice + details
+
+        matrice_image = np.clip(resultat, 0, 255).astype("uint8")
+
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+menu_filtres.add_command(label="Netteté", command=nettete)
+
+
+def fusion():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+
+        nom_fichier = filedialog.askopenfilename(
+            title="Choisis une deuxième image",
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.bmp")])
+        
+        if nom_fichier != "":
+            image2 = Image.open(nom_fichier).convert("RGB")
+            matrice2 = np.array(image2)
+
+            # Vérification des dimensions
+            if matrice2.shape != matrice_image.shape:
+                print("Erreur", "Les deux images doivent avoir la même taille")
+                return
+
+            matrice1 = matrice_image.astype(float)
+            matrice2 = matrice2.astype(float)
+
+            resultat = 0.5 * matrice1 + 0.5 * matrice2
+
+            matrice_image = np.clip(resultat, 0, 255).astype("uint8")
+            image = Image.fromarray(matrice_image)
+            afficher_image()
+
+menu_fichier.add_command(label="Fusion", command=fusion)
+
+def flou_gaussien():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        rayon = simpledialog.askfloat(
+            "Flou gaussien", "Choisis le rayon du flou :\n1 = léger\n3 = moyen\n6 = fort", minvalue=0.1, maxvalue=20)
+
+        if rayon is not None:
+            image_pil = Image.fromarray(matrice_image.astype("uint8"))
+            image_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=rayon))
+
+            matrice_image = np.array(image_pil)
+
+            image = Image.fromarray(matrice_image)
+            afficher_image()
+
+
+menu_filtres.add_command(label="Flou gaussien", command=flou_gaussien)
+
+
+def nettete_gaussienne():
+    global image, matrice_image
+
+    sauvegarder_avant_filtre()
+
+    if matrice_image is not None:
+        rayon = simpledialog.askfloat("Netteté gaussienne", "Choisis le rayon du flou gaussien :\n1 = léger\n3 = moyen\n6 = fort", minvalue=0.1, maxvalue=20)
+
+        if rayon is None:
+            return
+
+        image_originale = matrice_image.astype(float)
+
+        image_pil = Image.fromarray(matrice_image.astype("uint8"))
+        image_floue_pil = image_pil.filter(ImageFilter.GaussianBlur(radius=rayon))
+        image_floue = np.array(image_floue_pil).astype(float)
+
+        details = image_originale - image_floue
+        resultat = image_originale + details
+
+        resultat = np.clip(resultat, 0, 255)
+        matrice_image = resultat.astype("uint8")
+
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_filtres.add_command(label="Netteté gaussienne",command=nettete_gaussienne)
+
+#Filtre supplémentaire
+
+def noir_et_blanc():
+    global image, matrice_image
+
+    if matrice_image is not None:
+        
+        sauvegarder_avant_filtre()
+
+        rouge = matrice_image[:, :, 0]
+        vert = matrice_image[:, :, 1]
+        bleu = matrice_image[:, :, 2]
+
+        gris = (rouge + vert + bleu) / 3
+
+        resultat = np.zeros(matrice_image.shape)
+        resultat[:, :, 0] = gris
+        resultat[:, :, 1] = gris
+        resultat[:, :, 2] = gris
+
+        matrice_image = np.clip(resultat, 0, 255).astype("uint8")
+
+        image = Image.fromarray(matrice_image)
+        afficher_image()
+
+
+menu_filtres.add_command(label="Noir et blanc", command=noir_et_blanc)
+
+
+
+
+
+#Fonction pour annuler le dernier filtre appliqué
+
+def sauvegarder_avant_filtre(): #Ici on copie la matrice avant le changement
+    global matrice_avant_filtre, matrice_image
+
+    if matrice_image is not None:
+        matrice_avant_filtre = matrice_image.copy()
+
+def annuler(): #ici on revient en arrière grâce à la sauvegarde
+#On ne peut revenir en arrière qu'une seule fois
+    global image, matrice_image, matrice_avant_filtre
+
+    if matrice_avant_filtre is not None:
+        matrice_image = matrice_avant_filtre.copy() #On rajoute copy pour plus de sécurité, on nee voudrait pas que ça pointe vers la meme liste
+        image = Image.fromarray(matrice_image.astype("uint8"))
+        afficher_image()
+
+menu_filtres.add_command(label="Annuler", command=annuler)
+
+
+#On créer une fonction lancer_programme pour l'utiliser dans main.py
+
+def lancer_programme():
+    fenetre.mainloop()
