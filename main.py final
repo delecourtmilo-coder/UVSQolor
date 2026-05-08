@@ -1,0 +1,3 @@
+from programme import lancer_programme
+
+lancer_programme()
