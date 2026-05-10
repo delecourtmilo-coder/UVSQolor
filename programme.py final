@@ -1,7 +1,5 @@
 """Import de toutes les bibliothèques nécessaires"""
 
-#Import de toutes les choses nécessaires
-
 import numpy as np
 from tkinter import simpledialog
 import tkinter as tk
