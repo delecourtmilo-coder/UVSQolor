@@ -1,4 +1,4 @@
-#Ouvrir une image"
+"""Import de toutes les bibliothèques nécessaires"""
 
 #Import de toutes les choses nécessaires
 
@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk, ImageFilter
 
-#Initialisation des fonctions qu'on utilisera 
+"""Initialisation des fonctions qu'on utilisera plus tard"""
 
 image = None
 photo = None
@@ -19,7 +19,7 @@ historique = []
 indice_historique = -1
 menu_edition = None
 
-#Afficher l'image (fonction réutilisée dans ouvrir image après)
+"""Afficher l'image (fonction réutilisée dans ouvrir image après)"""
 
 def afficher_image():
     global photo, image, canvas
@@ -35,7 +35,7 @@ def afficher_image():
      # "all" est compris par le programme comme pour "blue"
     canvas.create_image(0, 0,anchor=tk.NW, image=photo) #On a rajouté Anchor parce que sinon l'image est coupée et mal placée
 
-#Ouvrir une image 
+"""Ouvrir une image"""
 
 def ouvrir_image():
     global image, photo, matrice_image
@@ -53,7 +53,7 @@ def ouvrir_image():
         print("Taille de l'image :", image.size)
         print("Forme de la matrice :", matrice_image.shape)
 
-# Création de la fenêtre pour l'utilisateur
+"""Création de la fenêtre pour l'utilisateur"""
 
 fenetre = tk.Tk()
 fenetre.title("UVSQolor")
@@ -63,7 +63,8 @@ canvas = tk.Canvas(fenetre, bg="white")
 canvas.grid(row=1, column=0) #on utilise pack() pour l'instant parce que c'est plus simple mais on va peut etre utilisé grid() par la suite 
 
 
-# Menu
+"""Menu"""
+
 menu = tk.Menu(fenetre)
 fenetre.config(menu=menu) #propriété menu=l'objet qu'on a défini nommé menu
 
@@ -76,8 +77,7 @@ menu_filtres = tk.Menu(menu, tearoff=0)
 menu.add_cascade(label="Filtres", menu=menu_filtres)
 
 
-
-#Filtre négatif
+"""Les filtres"""
 
 def negatif():
     global image, matrice_image
@@ -335,10 +335,7 @@ def noir_et_blanc():
 menu_filtres.add_command(label="Noir et blanc", command=noir_et_blanc)
 
 
-
-
-
-#Fonction pour annuler le dernier filtre appliqué
+"""Fonction pour annuler le dernier filtre appliqué"""
 
 def sauvegarder_avant_filtre(): #Ici on copie la matrice avant le changement
     global matrice_avant_filtre, matrice_image
@@ -358,7 +355,7 @@ def annuler(): #ici on revient en arrière grâce à la sauvegarde
 menu_filtres.add_command(label="Annuler", command=annuler)
 
 
-#On créer une fonction lancer_programme pour l'utiliser dans main.py
+"""On créer une fonction lancer_programme pour l'utiliser dans main.py"""
 
 def lancer_programme():
     fenetre.mainloop()
